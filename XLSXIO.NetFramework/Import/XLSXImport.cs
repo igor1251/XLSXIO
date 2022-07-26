@@ -86,17 +86,24 @@ namespace XLSXIO.NetFramework.Import
                     var cellValue = row.GetCell(cellIndex);
                     if (cellValue != null)
                     {
-                        if (key.Type == typeof(UInt16)) valuesCollection[j] = Convert.ToUInt16(cellValue.NumericCellValue);
-                        else if (key.Type == typeof(UInt32)) valuesCollection[j] = Convert.ToUInt32(cellValue.NumericCellValue);
-                        else if (key.Type == typeof(UInt64)) valuesCollection[j] = Convert.ToUInt64(cellValue.NumericCellValue);
-                        else if (key.Type == typeof(Int16)) valuesCollection[j] = Convert.ToInt16(cellValue.NumericCellValue);
-                        else if (key.Type == typeof(Int32)) valuesCollection[j] = Convert.ToInt32(cellValue.NumericCellValue);
-                        else if (key.Type == typeof(Int64)) valuesCollection[j] = Convert.ToInt64(cellValue.NumericCellValue);
-                        else if (key.Type == typeof(DateTime)) valuesCollection[j] = Convert.ToDateTime(cellValue.DateCellValue);
-                        else if (key.Type == typeof(Double)) valuesCollection[j] = Convert.ToDouble(cellValue.NumericCellValue);
-                        else if (key.Type == typeof(Single)) valuesCollection[j] = Convert.ToSingle(cellValue.NumericCellValue);
-                        else if (key.Type == typeof(Boolean)) valuesCollection[j] = Convert.ToBoolean(cellValue.BooleanCellValue);
-                        else valuesCollection[j] = cellValue.ToString();
+                        try
+                        {
+                            if (key.Type == typeof(UInt16)) valuesCollection[j] = Convert.ToUInt16(cellValue.NumericCellValue);
+                            else if (key.Type == typeof(UInt32)) valuesCollection[j] = Convert.ToUInt32(cellValue.NumericCellValue);
+                            else if (key.Type == typeof(UInt64)) valuesCollection[j] = Convert.ToUInt64(cellValue.NumericCellValue);
+                            else if (key.Type == typeof(Int16)) valuesCollection[j] = Convert.ToInt16(cellValue.NumericCellValue);
+                            else if (key.Type == typeof(Int32)) valuesCollection[j] = Convert.ToInt32(cellValue.NumericCellValue);
+                            else if (key.Type == typeof(Int64)) valuesCollection[j] = Convert.ToInt64(cellValue.NumericCellValue);
+                            else if (key.Type == typeof(DateTime)) valuesCollection[j] = Convert.ToDateTime(cellValue.DateCellValue);
+                            else if (key.Type == typeof(Double)) valuesCollection[j] = Convert.ToDouble(cellValue.NumericCellValue);
+                            else if (key.Type == typeof(Single)) valuesCollection[j] = Convert.ToSingle(cellValue.NumericCellValue);
+                            else if (key.Type == typeof(Boolean)) valuesCollection[j] = Convert.ToBoolean(cellValue.BooleanCellValue);
+                            else valuesCollection[j] = cellValue.ToString();
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception($"Значение в ячейке {cellValue.Address} имеет неправильный формат.\nОжидаемый формат: {key.Type}\nЗначение, вызвавшее ошибку: {cellValue}");
+                        }
                     }
                     else valuesCollection[j] = null;
                     j++;
