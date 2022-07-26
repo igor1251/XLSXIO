@@ -35,16 +35,8 @@ namespace LibTest
         {
             var xls = new XLSXImport(new XLSColumnTemplatesCollection
             {
-                { "номер агента", typeof(UInt64) },
-                { "номер субагента", typeof(UInt32) },
-                { "дата операции БО", typeof(DateTime) },
-                { "тип БО", typeof(Int32) },
-                { "Сумма", typeof(Double) },
-                { "Валюта", typeof(string) },
-                { "комментарий", typeof(string) },
-                { "номер реферала", typeof(Int32) },
-                { "номер кассы", typeof(Int32) },
-                { "сумма в валюте кассы (если имеется)", typeof(Double) },
+                { "test", typeof(UInt64) },
+                { "test2", typeof(UInt32) },
             });
 
             var filename = PickFileToImport();
