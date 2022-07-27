@@ -2,15 +2,20 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace XLSXIO.NetFramework.AuxiliaryTypes
+namespace XLSXIO.AuxiliaryTypes
 {
     public class XLSColumnTemplatesCollection : IEnumerable<XLSColumnTemplate>
     {
         List<XLSColumnTemplate> columns = new List<XLSColumnTemplate>();
-
-        public void Add(string name, Type type)
+        /// <summary>
+        /// Добавляет объявление ожидаемого столбца в документе на импорт
+        /// </summary>
+        /// <param name="inDocumentName">Имя столбца в документе xls(x)</param>
+        /// <param name="inDatabaseName">Имя столбца в выходном DataTable</param>
+        /// <param name="type">Предполагаемый тип данных, хранимый в ячейке</param>
+        public void Add(string inDocumentName, string inDatabaseName, Type type)
         {
-            columns.Add(new XLSColumnTemplate(name, type));
+            columns.Add(new XLSColumnTemplate(inDocumentName, inDatabaseName, type));
         }
 
         public IEnumerator<XLSColumnTemplate> GetEnumerator()

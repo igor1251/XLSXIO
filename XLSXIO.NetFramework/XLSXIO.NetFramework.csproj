@@ -61,6 +61,8 @@
   <ItemGroup>
     <Compile Include="AuxiliaryTypes\XLSColumnTemplate.cs" />
     <Compile Include="AuxiliaryTypes\XLSColumnTemplatesCollection.cs" />
+    <Compile Include="Base\XLSXBase.cs" />
+    <Compile Include="Export\XLSXExport.cs" />
     <Compile Include="Import\XLSXImport.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

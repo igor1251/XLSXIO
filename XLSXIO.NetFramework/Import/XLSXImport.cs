@@ -4,28 +4,24 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
-using XLSXIO.NetFramework.AuxiliaryTypes;
 using System.Data;
 using NPOI.SS.UserModel;
 using NPOI.HSSF.UserModel;
 using NPOI.XSSF.UserModel;
+using XLSXIO.AuxiliaryTypes;
+using XLSXIO.Base;
 
-namespace XLSXIO.NetFramework.Import
+namespace XLSXIO.Import
 {
-    public class XLSXImport
+    public class XLSXImport : XLSXBase
     {
-        Dictionary<XLSColumnTemplate, int> columns = new Dictionary<XLSColumnTemplate, int>();
-        DataTable result = new DataTable();
-
-        public XLSXImport(IEnumerable<XLSColumnTemplate> columnTemplates)
-        {
-            foreach (var template in columnTemplates)
-            {
-                result.Columns.Add(new DataColumn(template.Name.ToLower()));
-                columns.Add(template, -1);
-            }
-        }
-
+        public XLSXImport(IEnumerable<XLSColumnTemplate> templates) : base(templates) { }
+        /// <summary>
+        /// Загружает книгу из документа
+        /// </summary>
+        /// <param name="filename">Имя xls(x) файла</param>
+        /// <returns>Рабочая книга</returns>
+        /// <exception cref="Exception">Возникает при попытке разобрать файл с неподдерживаемым расширением</exception>
         IWorkbook LoadWorkbook(string filename)
         {
             var extension = Path.GetExtension(filename);
@@ -42,47 +38,68 @@ namespace XLSXIO.NetFramework.Import
                 }
             }
         }
-
-        public DataTable Load(string filename)
+        /// <summary>
+        /// Загружает столбцы из документа и запоминает индекс каждого, который имеет вхождение в 
+        /// коллекцию описанных столбцов, переданных в конструктор
+        /// </summary>
+        /// <param name="sheet">Лист Excel</param>
+        void LoadColumns(ISheet sheet)
         {
-            var book = LoadWorkbook(filename);
-            var sheet = book.GetSheetAt(0);
-
             var headersRow = sheet.GetRow(0);
             for (int i = 0; i < headersRow.LastCellNum; i++)
             {
                 if (headersRow.Cells[i] == null) break;
-                var column = columns.FirstOrDefault(x => x.Key.Name.ToLower() == headersRow.Cells[i].ToString().ToLower());
+                var column = Columns.FirstOrDefault(x => x.Key.InDocumentName.ToLower() == headersRow.Cells[i].ToString().ToLower());
                 if (!column.Equals(default(KeyValuePair<XLSColumnTemplate, int>)))
                 {
-                    columns[column.Key] = i;
+                    Columns[column.Key] = i;
                 }
             }
-
+        }
+        /// <summary>
+        /// Проверяет, были ли найдены все требуемые столбцы в документе
+        /// </summary>
+        /// <exception cref="Exception">Вызывается, если индекс хотя бы одного столбца равен -1 (значение по-умолчанию)</exception>
+        void CheckDocumentForErrors()
+        {
             var errorText = new StringBuilder();
             bool columnNotFound = false;
-            foreach (var column in columns)
+            foreach (var column in Columns)
             {
                 columnNotFound = column.Value < 0;
                 if (columnNotFound)
                 {
-                    errorText.AppendLine(column.Key.Name);
+                    errorText.AppendLine(column.Key.InDocumentName);
                 }
             }
             if (errorText.Length > 0)
             {
-                errorText.Insert(0, "Не найдены следующие столбцы:\n");
+                errorText.Insert(0, $"Не найдены следующие столбцы:{NEW_LINE_CHAR}");
                 throw new Exception(errorText.ToString());
             }
+        }
+        /// <summary>
+        /// Выполняет разбор значений, хранимых в активном листе документа
+        /// </summary>
+        /// <param name="sheet">Лист Excel</param>
+        /// <returns>Содержимое документа в виде объекта DataTable</returns>
+        /// <exception cref="Exception">Возникает при несоответствии ожидаемого и хранимого форматов в документе</exception>
+        DataTable ParseSheet(ISheet sheet)
+        {
+            var result = new DataTable();
+            foreach (var template in Columns)
+            {
+                result.Columns.Add(new DataColumn(template.Key.InDatabaseName));
+            }
 
-            object[] valuesCollection = new object[columns.Count];
+            object[] valuesCollection = new object[Columns.Count];
             int j = 0;
             for (int i = 1; i <= sheet.LastRowNum; i++)
             {
                 var row = sheet.GetRow(i);
-                foreach (var key in columns.Keys)
+                foreach (var key in Columns.Keys)
                 {
-                    var cellIndex = columns[key];
+                    var cellIndex = Columns[key];
                     var cellValue = row.GetCell(cellIndex);
                     if (cellValue != null)
                     {
@@ -95,14 +112,14 @@ namespace XLSXIO.NetFramework.Import
                             else if (key.Type == typeof(Int32)) valuesCollection[j] = Convert.ToInt32(cellValue.NumericCellValue);
                             else if (key.Type == typeof(Int64)) valuesCollection[j] = Convert.ToInt64(cellValue.NumericCellValue);
                             else if (key.Type == typeof(DateTime)) valuesCollection[j] = Convert.ToDateTime(cellValue.DateCellValue);
-                            else if (key.Type == typeof(Double)) valuesCollection[j] = Convert.ToDouble(cellValue.NumericCellValue);
+                            else if (key.Type == typeof(Double)) valuesCollection[j] = cellValue.NumericCellValue;
                             else if (key.Type == typeof(Single)) valuesCollection[j] = Convert.ToSingle(cellValue.NumericCellValue);
                             else if (key.Type == typeof(Boolean)) valuesCollection[j] = Convert.ToBoolean(cellValue.BooleanCellValue);
                             else valuesCollection[j] = cellValue.ToString();
                         }
                         catch (Exception ex)
                         {
-                            throw new Exception($"Значение в ячейке {cellValue.Address} имеет неправильный формат.\nОжидаемый формат: {key.Type}\nЗначение, вызвавшее ошибку: {cellValue}");
+                            throw new Exception($"Значение в ячейке {cellValue.Address} имеет неправильный формат.{NEW_LINE_CHAR}Ожидаемый формат: {key.Type}{NEW_LINE_CHAR}Значение, вызвавшее ошибку: {cellValue}");
                         }
                     }
                     else valuesCollection[j] = null;
@@ -113,6 +130,21 @@ namespace XLSXIO.NetFramework.Import
             }
 
             return result;
+        }
+        /// <summary>
+        /// Выполняет загрузку содержимого файла
+        /// </summary>
+        /// <param name="filename">Имя xls(x) файла</param>
+        /// <returns>Объект DataTable с содержимым файла</returns>
+        public DataTable Load(string filename)
+        {
+            var book = LoadWorkbook(filename);
+            var sheet = book.GetSheetAt(0);
+
+            LoadColumns(sheet);
+            CheckDocumentForErrors();
+            var loadResult = ParseSheet(sheet);
+            return loadResult;
         }
     }
 }
